@@ -16,6 +16,8 @@ if (!defined('IN_MYBB')) {
     die('Direct initialization of this file is not allowed.<br /><br />Please make sure IN_MYBB is defined.');
 }
 
+global $plugins;
+
 $plugins->add_hook('newpoints_start', 'newpoints_lottery_page');
 $plugins->add_hook('newpoints_default_menu', 'newpoints_lottery_menu');
 $plugins->add_hook('newpoints_stats_start', 'newpoints_lottery_stats');
@@ -30,7 +32,7 @@ function newpoints_lottery_info()
         'codeversion' => '3100',
         'guid' => '',
         'compatibility' => '31*',
-        'codename' => 'newpoints_lottery'
+        'codename' => 'newpoints_points_lottery'
     ];
 }
 
