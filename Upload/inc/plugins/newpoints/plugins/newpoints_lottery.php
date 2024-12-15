@@ -9,6 +9,8 @@
  *
  ***************************************************************************/
 
+use function Newpoints\Core\templates_get;
+
 // Disallow direct access to this file for security reasons
 if (!defined('IN_MYBB')) {
     die('Direct initialization of this file is not allowed.<br /><br />Please make sure IN_MYBB is defined.');
@@ -24,9 +26,11 @@ function newpoints_lottery_info()
         'name' => 'Lottery',
         'description' => 'Integrates a lottery system with NewPoints.',
         'author' => 'Diogo Parrinha',
-        'version' => '2.0',
+        'version' => '3.1.0',
+        'codeversion' => '3100',
         'guid' => '',
-        'compatibility' => '2*'
+        'compatibility' => '31*',
+        'codename' => 'newpoints_lottery'
     ];
 }
 
@@ -37,7 +41,7 @@ function newpoints_lottery_install()
     // add settings
     newpoints_add_setting(
         'newpoints_lottery_ticket_price',
-        'newpoints_lottery',
+        'lottery',
         'Ticket Price',
         'The price of each ticket. (default is 100)',
         'text',
@@ -46,7 +50,7 @@ function newpoints_lottery_install()
     );
     newpoints_add_setting(
         'newpoints_lottery_draw_frequency',
-        'newpoints_lottery',
+        'lottery',
         'Time between each drawing',
         'How often (in seconds) the lottery is run. (default is 7 days: 604800)',
         'text',
@@ -55,7 +59,7 @@ function newpoints_lottery_install()
     );
     newpoints_add_setting(
         'newpoints_lottery_win',
-        'newpoints_lottery',
+        'lottery',
         'Prize',
         'The amount of points which is paid to the winner.',
         'text',
@@ -64,7 +68,7 @@ function newpoints_lottery_install()
     );
     newpoints_add_setting(
         'newpoints_lottery_rest',
-        'newpoints_lottery',
+        'lottery',
         'Rest time',
         'Time (in seconds) between each term and that the winners are shown and users are not allowed to buy tickets. (default is 2 hours: 7200)',
         'text',
@@ -73,7 +77,7 @@ function newpoints_lottery_install()
     );
     newpoints_add_setting(
         'newpoints_lottery_usepot',
-        'newpoints_lottery',
+        'lottery',
         'Use Lottery Pot',
         'If yes, the cost of each ticket goes towards the pot of the lottery. (default is Yes)',
         'yesno',
@@ -82,7 +86,7 @@ function newpoints_lottery_install()
     );
     newpoints_add_setting(
         'newpoints_lottery_lastwinners',
-        'newpoints_lottery',
+        'lottery',
         'Last Winners',
         'Number of last winners to show in statistics.',
         'text',
@@ -176,6 +180,12 @@ function newpoints_lottery_uninstall()
 function newpoints_lottery_activate()
 {
     global $db, $mybb;
+
+    $query = $db->simple_select('newpoints_settings', 'sid', "plugin='newpoints_lottery'");
+
+    while ($setting = $db->fetch_array($query)) {
+        $db->update_query('newpoints_settings', ['plugin' => 'lottery'], "sid='{$setting['sid']}'");
+    }
 
     newpoints_add_template(
         'newpoints_lottery',
@@ -374,11 +384,10 @@ function newpoints_lottery_menu(&$menu)
     global $mybb, $lang;
     newpoints_lang_load('newpoints_lottery');
 
-    if ($mybb->input['action'] == 'lottery') {
-        $menu[] = "&raquo; <a href=\"{$mybb->settings['bburl']}/newpoints.php?action=lottery\">" . $lang->newpoints_lottery . '</a>';
-    } else {
-        $menu[] = "<a href=\"{$mybb->settings['bburl']}/newpoints.php?action=lottery\">" . $lang->newpoints_lottery . '</a>';
-    }
+    $menu[] = [
+        'action' => 'lottery',
+        'lang_string' => 'newpoints_lottery'
+    ];
 }
 
 function newpoints_lottery_page()
@@ -394,9 +403,11 @@ function newpoints_lottery_page()
     } else {
         global $db, $lang, $cache, $theme, $header, $templates, $plugins, $headerinclude, $footer, $options;
 
-        if ($mybb->input['refresh']) {
+        if ($mybb->get_input('refresh', \MyBB::INPUT_INT)) {
             redirect('newpoints.php?action=lottery');
         }
+        //$cache->update('lottery_term', []);
+        //$cache->update('lottery_pot', []);
 
         $term = $cache->read('lottery_term');
         if (empty($term)) {
@@ -519,6 +530,8 @@ function newpoints_lottery_page()
             );
         }
 
+        $lottery_end = $lottery_win = $ticket_bought = '';
+
         // Is it still time for buying?
         if (
             TIME_NOW < $term['start_time'] + $mybb->settings['newpoints_lottery_draw_frequency'] // not yet ended
@@ -580,7 +593,7 @@ function newpoints_lottery_page()
             $last_winner = '';
         }
 
-        eval('$lotteryinfo .= "' . $templates->get('newpoints_lottery_info') . '";');
+        eval('$lotteryinfo = "' . $templates->get('newpoints_lottery_info') . '";');
 
         $usertickets = '';
         $comma = '';
@@ -598,11 +611,10 @@ function newpoints_lottery_page()
 
         $lottery_ticket_price = newpoints_format_points($mybb->settings['newpoints_lottery_ticket_price']);
 
-        eval('$buyticket .= "' . $templates->get('newpoints_lottery_buyticket') . '";');
+        eval('$buyticket = "' . $templates->get('newpoints_lottery_buyticket') . '";');
         $title = strip_tags($lang->newpoints_lottery_viewing_lottery);
 
-        eval("\$page = \"" . $templates->get('newpoints_lottery') . "\";");
-        output_page($page);
+        output_page(eval(templates_get('lottery')));
     }
 }
 
