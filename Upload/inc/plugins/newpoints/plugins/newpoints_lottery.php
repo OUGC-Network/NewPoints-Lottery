@@ -9,7 +9,13 @@
  *
  ***************************************************************************/
 
+use function Newpoints\Core\log_add;
+use function Newpoints\Core\points_add_simple;
+use function Newpoints\Core\points_format;
+use function Newpoints\Core\points_subtract;
 use function Newpoints\Core\templates_get;
+
+use const Newpoints\Core\LOGGING_TYPE_CHARGE;
 
 // Disallow direct access to this file for security reasons
 if (!defined('IN_MYBB')) {
@@ -383,7 +389,6 @@ function newpoints_lottery_deactivate()
 // show lottery in the list
 function newpoints_lottery_menu(&$menu)
 {
-    global $mybb, $lang;
     newpoints_lang_load('newpoints_lottery');
 
     $menu[] = [
@@ -405,7 +410,7 @@ function newpoints_lottery_page()
     } else {
         global $db, $lang, $cache, $theme, $header, $templates, $plugins, $headerinclude, $footer, $options;
 
-        if ($mybb->get_input('refresh', \MyBB::INPUT_INT)) {
+        if ($mybb->get_input('refresh', MyBB::INPUT_INT)) {
             redirect('newpoints.php?action=lottery');
         }
         //$cache->update('lottery_term', []);
@@ -473,7 +478,10 @@ function newpoints_lottery_page()
                     error($lang->newpoints_lottery_enough_money);
                 } else {
                     // We have enough points, so buy us a ticket!
-                    newpoints_addpoints($mybb->user['uid'], -($mybb->settings['newpoints_lottery_ticket_price']));
+                    points_subtract(
+                        (int)$mybb->user['uid'],
+                        (float)$mybb->settings['newpoints_lottery_ticket_price']
+                    );
 
                     // is the pot enabled?
                     if ($mybb->settings['newpoints_lottery_usepot'] == 1) {
@@ -492,13 +500,16 @@ function newpoints_lottery_page()
                     $ticketid = $db->insert_id();
 
                     // log purchase
-                    newpoints_log(
+                    log_add(
                         'lottery_ticket',
-                        $lang->sprintf(
-                            $lang->newpoints_lottery_log_buy,
-                            $ticketid,
-                            $mybb->settings['newpoints_lottery_ticket_price']
-                        )
+                        '',
+                        $mybb->user['username'] ?? '',
+                        (int)$mybb->user['uid'],
+                        (float)$mybb->settings['newpoints_lottery_ticket_price'],
+                        (int)$ticketid,
+                        (int)$term_id,
+                        0,
+                        LOGGING_TYPE_CHARGE
                     );
 
                     $db->update_query(
@@ -556,7 +567,7 @@ function newpoints_lottery_page()
 
             $lottery_win = $lang->sprintf(
                 $lang->newpoints_lottery_win,
-                newpoints_format_points(newpoints_lottery_money())
+                points_format(newpoints_lottery_money())
             );
             $ticket_bought = $lang->sprintf($lang->newpoints_lottery_ticket_bought, (int)$term['ticket_count']);
 
@@ -583,12 +594,12 @@ function newpoints_lottery_page()
 
         if (!empty($last_winner_array) && $last_winner_array['uid'] > 0) {
             $last_winner_array['data'] = explode('-', $last_winner_array['data']);
-            $winner_ticket_number = $last_winner_array['data'][0];
+            $winner_ticket_number = $last_winner_array['data'][0] ?? $last_winner_array['log_primary_id'];
             $last_winner = $lang->sprintf(
                 $lang->newpoints_lottery_last_winner,
                 (int)$last_winner_array['uid'],
                 htmlspecialchars_uni($last_winner_array['username']),
-                newpoints_format_points($last_winner_array['data'][2])
+                points_format((float)($last_winner_array['data'][2] ?? $last_winner_array['points']))
             );
         } else {
             $winner_ticket_number = $lang->newpoints_lottery_noticket;
@@ -611,7 +622,7 @@ function newpoints_lottery_page()
 
         global $lottery_ticket_price;
 
-        $lottery_ticket_price = newpoints_format_points($mybb->settings['newpoints_lottery_ticket_price']);
+        $lottery_ticket_price = points_format((float)$mybb->settings['newpoints_lottery_ticket_price']);
 
         eval('$buyticket = "' . $templates->get('newpoints_lottery_buyticket') . '";');
         $title = strip_tags($lang->newpoints_lottery_viewing_lottery);
@@ -660,7 +671,7 @@ function newpoints_lottery_stats()
         $bgcolor = alt_trow();
         $data = explode('-', $winner['data']);
 
-        $winner['amount'] = newpoints_format_points($data[2]);
+        $winner['amount'] = points_format((float)($data[2] ?? $winner['points']));
 
         $link = build_profile_link(htmlspecialchars_uni($winner['username']), intval($winner['uid']));
         $winner['user'] = $link;
@@ -675,4 +686,59 @@ function newpoints_lottery_stats()
     }
 
     eval("\$newpoints_lottery_lastwinners = \"" . $templates->get('newpoints_lottery_stats') . "\";");
+}
+
+$plugins->add_hook('newpoints_logs_log_row', 'newpoints_lottery_logs_log_row');
+function newpoints_lottery_logs_log_row()
+{
+    global $lang;
+    global $log_data, $log_action, $log_primary, $log_secondary;
+
+    newpoints_lang_load('newpoints_lottery');
+
+    switch ($log_data['action']) {
+        case 'lottery_ticket':
+        case 'lottery_winner':
+            if (!empty($log_data['log_primary_id'])) {
+                $log_primary = $lang->sprintf(
+                    $lang->newpoints_lottery_logging_ticket_id,
+                    $log_data['log_primary_id']
+                );
+            }
+
+            if (!empty($log_data['log_secondary_id'])) {
+                $log_secondary = $lang->sprintf(
+                    $lang->newpoints_lottery_logging_term_id,
+                    $log_data['log_secondary_id']
+                );
+            }
+            break;
+    }
+
+    if ($log_data['action'] === 'lottery_ticket') {
+        $log_action = $lang->newpoints_lottery_logging_ticket;
+    }
+
+    if ($log_data['action'] === 'lottery_winner') {
+        $log_action = $lang->newpoints_lottery_logging_winner;
+    }
+}
+
+$plugins->add_hook('newpoints_logs_end', 'newpoints_lottery_logs_end');
+function newpoints_lottery_logs_end()
+{
+    global $lang;
+    global $action_types;
+
+    newpoints_lang_load('newpoints_lottery');
+
+    foreach ($action_types as $action_key => &$action_value) {
+        if ($action_key === 'lottery_ticket') {
+            $action_value = $lang->newpoints_lottery_logging_ticket;
+        }
+
+        if ($action_key === 'lottery_winner') {
+            $action_value = $lang->newpoints_lottery_logging_winner;
+        }
+    }
 }

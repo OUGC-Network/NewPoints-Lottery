@@ -51,3 +51,7 @@ $l['newpoints_lottery_user'] = 'User';
 $l['newpoints_lottery_amount'] = 'Amount';
 $l['newpoints_lottery_date'] = 'Date';
 $l['newpoints_lottery_task_ran'] = 'NewPoints Lottery task ran successfully.';
+$l['newpoints_lottery_logging_ticket'] = 'Lottery ticket';
+$l['newpoints_lottery_logging_winner'] = 'Lottery winner';
+$l['newpoints_lottery_logging_ticket_id'] = 'Ticket ID: {1}';
+$l['newpoints_lottery_logging_term_id'] = 'Term ID: {1}';

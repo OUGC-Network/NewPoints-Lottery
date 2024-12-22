@@ -1,4 +1,10 @@
 <?php
+
+use function Newpoints\Core\log_add;
+use function Newpoints\Core\points_add_simple;
+
+use const Newpoints\Core\LOGGING_TYPE_INCOME;
+
 /***************************************************************************
  *
  *   NewPoints Lottery plugin (/inc/plugins/tasks/newpoints_lottery.php)
@@ -32,7 +38,7 @@ function task_newpoints_lottery($task)
                 $points = newpoints_lottery_money();
 
                 // We've found a winner, time to give some points to the user (on shutdown)
-                newpoints_addpoints($winner_ticket['uid'], $points, 1, 1, false, true);
+                points_add_simple((int)$winner_ticket['uid'], $points);
 
                 // Load language
                 newpoints_lang_load('newpoints_lottery');
@@ -44,16 +50,16 @@ function task_newpoints_lottery($task)
                 );
 
                 // log winner
-                newpoints_log(
+                log_add(
                     'lottery_winner',
-                    $lang->sprintf(
-                        $lang->newpoints_lottery_log_winner,
-                        $winner_ticket['ticket_id'],
-                        $term['term_id'],
-                        $points
-                    ),
-                    $username,
-                    $winner_ticket['uid']
+                    '',
+                    $username ?? '',
+                    (int)$winner_ticket['uid'],
+                    $points,
+                    (int)$winner_ticket['ticket_id'],
+                    (int)$term['term_id'],
+                    0,
+                    LOGGING_TYPE_INCOME
                 );
 
                 $row = [
