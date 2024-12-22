@@ -34,8 +34,8 @@ function newpoints_lottery_info()
         'name' => 'Lottery',
         'description' => 'Integrates a lottery system with NewPoints.',
         'author' => 'Diogo Parrinha',
-        'version' => '3.1.0',
-        'codeversion' => '3100',
+        'version' => '3.1.1',
+        'codeversion' => '3101',
         'guid' => '',
         'compatibility' => '31*',
         'codename' => 'newpoints_points_lottery'
