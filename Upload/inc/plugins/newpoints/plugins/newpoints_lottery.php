@@ -9,11 +9,13 @@
  *
  ***************************************************************************/
 
+use function Newpoints\Core\language_load;
 use function Newpoints\Core\log_add;
-use function Newpoints\Core\points_add_simple;
+use function Newpoints\Core\main_file_name;
 use function Newpoints\Core\points_format;
 use function Newpoints\Core\points_subtract;
 use function Newpoints\Core\templates_get;
+use function Newpoints\Core\url_handler_build;
 
 use const Newpoints\Core\LOGGING_TYPE_CHARGE;
 
@@ -741,4 +743,37 @@ function newpoints_lottery_logs_end()
             $action_value = $lang->newpoints_lottery_logging_winner;
         }
     }
+}
+
+$plugins->add_hook('fetch_wol_activity_end', 'newpoints_lottery_fetch_wol_activity_end');
+function newpoints_lottery_fetch_wol_activity_end(array &$hook_parameters): array
+{
+    if (my_strpos($hook_parameters['location'], main_file_name()) === false ||
+        my_strpos($hook_parameters['location'], 'action=lottery') === false) {
+        return $hook_parameters;
+    }
+
+    $hook_parameters['activity'] = 'newpoints_newpoints_lottery';
+
+    return $hook_parameters;
+}
+
+$plugins->add_hook('build_friendly_wol_location_end', 'newpoints_lottery_build_friendly_wol_location_end');
+function newpoints_lottery_build_friendly_wol_location_end(array &$hook_parameters): array
+{
+    global $mybb, $lang;
+
+    language_load('newpoints_lottery');
+
+    switch ($hook_parameters['user_activity']['activity']) {
+        case 'newpoints_newpoints_lottery':
+            $hook_parameters['location_name'] = $lang->sprintf(
+                $lang->newpoints_lottery_wol_location,
+                $mybb->settings['bburl'],
+                url_handler_build(['action' => 'lottery'])
+            );
+            break;
+    }
+
+    return $hook_parameters;
 }
