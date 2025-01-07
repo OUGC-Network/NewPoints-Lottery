@@ -210,12 +210,7 @@ function newpoints_lottery_activate()
 <table width="100%" border="0" align="center">
 <tr>
 <td valign="top" width="180">
-<table border="0" cellspacing="{$theme[\'borderwidth\']}" cellpadding="{$theme[\'tablespace\']}" class="tborder">
-<tr>
-<td class="thead"><strong>{$lang->newpoints_menu}</strong></td>
-</tr>
-{$options}
-</table>
+{$newpoints_menu}
 </td>
 <td valign="top">
 <table border="0" cellspacing="{$theme[\'borderwidth\']}" cellpadding="{$theme[\'tablespace\']}" class="tborder"  style="padding:0px;" >
@@ -629,6 +624,8 @@ function newpoints_lottery_page()
         eval('$buyticket = "' . $templates->get('newpoints_lottery_buyticket') . '";');
         $title = strip_tags($lang->newpoints_lottery_viewing_lottery);
 
+        global $newpoints_menu;
+        
         output_page(eval(templates_get('lottery')));
     }
 }
