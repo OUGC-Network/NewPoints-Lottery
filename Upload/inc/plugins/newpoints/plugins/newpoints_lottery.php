@@ -213,7 +213,7 @@ function newpoints_lottery_activate()
 {$newpoints_menu}
 </td>
 <td valign="top">
-<table border="0" cellspacing="{$theme[\'borderwidth\']}" cellpadding="{$theme[\'tablespace\']}" class="tborder"  style="padding:0px;" >
+<table border="0" cellspacing="{$theme[\'borderwidth\']}" cellpadding="{$theme[\'tablespace\']}" class="tborder">
 <thead>
 	<tr><th class="thead" colspan="2"><strong>{$lang->newpoints_lottery_viewing_lottery}</strong></th></tr>
 </thead>
